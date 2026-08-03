@@ -1,0 +1,175 @@
+// ============================================================
+// Finko — Schema de base de datos
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ============================================================
+// Better Auth — Tablas de autenticación
+// ============================================================
+
+/** @description Usuario registrado en la plataforma */
+model user {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  sessions           session[]
+  accounts           account[]
+  financialAccounts  FinancialAccount[]
+  categories         Category[]
+  transactions       Transaction[]
+  budgets            Budget[]
+}
+
+/** @description Sesión activa del usuario */
+model session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user user @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/** @description Cuenta de autenticación (credenciales o OAuth) */
+model account {
+  id                    String    @id @default(cuid())
+  userId                String
+  accountId             String
+  providerId            String
+  accessToken           String?
+  refreshToken          String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  idToken               String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  user user @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/** @description Token de verificación (email, password reset) */
+model verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+// ============================================================
+// Finko — Tablas del dominio de finanzas
+// ============================================================
+
+/** @description Tipo de transacción */
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
+
+/** @description Tipo de cuenta financiera */
+enum AccountType {
+  CASH
+  BANK
+  CREDIT_CARD
+  SAVINGS
+  INVESTMENT
+}
+
+/** @description Cuenta financiera del usuario (efectivo, banco, tarjeta, ahorros) */
+model FinancialAccount {
+  id        String      @id @default(cuid())
+  userId    String
+  name      String
+  type      AccountType
+  balance   Int         @default(0)
+  color     String      @default("#6366f1")
+  icon      String      @default("Ef")
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  user         user          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@index([userId])
+}
+
+/** @description Categoría de transacción (predefinida o custom del usuario) */
+model Category {
+  id           String          @id @default(cuid())
+  userId       String?
+  name         String
+  type         TransactionType
+  icon         String
+  hue          Int             @default(200)
+  isDefault    Boolean         @default(false)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  user         user?           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+  budgets      Budget[]
+
+  @@index([userId])
+}
+
+/** @description Transacción financiera (ingreso o gasto) */
+model Transaction {
+  id                 String           @id @default(cuid())
+  userId             String
+  financialAccountId String
+  categoryId         String
+  type               TransactionType
+  amount             Int
+  description        String
+  note               String?
+  date               DateTime
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  user             user             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  financialAccount FinancialAccount @relation(fields: [financialAccountId], references: [id], onDelete: Cascade)
+  category         Category         @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  @@index([userId])
+  @@index([userId, date])
+  @@index([userId, type])
+}
+
+/** @description Presupuesto mensual por categoría */
+model Budget {
+  id         String   @id @default(cuid())
+  userId     String
+  categoryId String
+  amount     Int
+  month      Int
+  year       Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user     user     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, categoryId, month, year])
+  @@index([userId, month, year])
+}
