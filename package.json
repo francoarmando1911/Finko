@@ -1,0 +1,6 @@
+{
+  "name": "finko",
+  "private": true,
+  "workspaces": ["client"],
+  "license": "MIT"
+}
