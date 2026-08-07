@@ -8,6 +8,8 @@ import {
   Wallet,
 } from "lucide-react";
 import Link from "next/link";
+import { headers } from "next/headers";
+import { auth } from "@/lib/auth";
 
 /** @description Datos placeholder hasta conectar con la base de datos */
 const MOCK_BALANCE = 485750;
@@ -68,12 +70,15 @@ function formatCurrency(amount: number): string {
 }
 
 /** @description Página principal del dashboard — balance, resumen y últimas transacciones */
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  const session = await auth.api.getSession({ headers: await headers() });
+  const firstName = session?.user?.name?.split(" ")[0] ?? "Usuario";
+
   return (
     <div className="mx-auto max-w-lg space-y-6">
       {/* Saludo personalizado */}
       <div>
-        <h1 className="font-heading text-2xl text-foreground">Hola, Usuario</h1>
+        <h1 className="font-heading text-2xl text-foreground">Hola, {firstName}</h1>
         <p className="text-sm text-muted-foreground">
           Resumen de tus finanzas este mes
         </p>
