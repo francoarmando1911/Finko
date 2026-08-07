@@ -18,7 +18,7 @@ export function TopBar() {
   }
 
   return (
-    <header className="flex items-center justify-between px-5 pb-2 pt-5">
+    <header className="flex items-center justify-between px-5 pb-5 pt-5">
       <FinkoLogo />
       <div className="flex items-center gap-2">
         <ThemeToggle />
